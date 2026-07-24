@@ -1,0 +1,106 @@
+version: '3'
+
+# Workspace of independent C++ "subprojects" (one folder per algorithm/mechanism).
+#
+# Conventions for a subproject folder <name>/:
+#   *.hpp          -> header-only implementation
+#   *_test.cpp     -> unit tests (doctest); only `#include "doctest.h"`, no main()
+#   main.cpp       -> optional demo driver (has its own main())
+#
+# Create a new one:   task new  -- <name>
+# Run its tests:      task test -- <name>
+# Run its demo:       task run  -- <name>
+# Run every test:     task test-all
+
+vars:
+  CXX: g++
+  # -static* keeps the binaries self-contained: without them the exe depends on
+  # libstdc++-6.dll / libgcc_s_seh-1.dll from MinGW's bin/, so running it in a
+  # terminal that doesn't have that folder on PATH fails to load (nonzero exit).
+  CXXFLAGS: -std=c++23 -Wall -Wextra -O2 -Icommon -static -static-libgcc -static-libstdc++
+  EXE: '{{if eq OS "windows"}}.exe{{end}}'
+
+tasks:
+  default:
+    desc: List available tasks
+    cmds:
+      - task --list
+
+  projects:
+    desc: List all subprojects (folders that contain *_test.cpp)
+    cmds:
+      - cmd: |
+          for d in */ ; do
+            d="${d%/}"; d="${d%\\}"
+            case "$d" in _*|.*|common) continue;; esac
+            set -- "$d"/*_test.cpp
+            if [ -e "$1" ]; then echo "$d"; fi
+          done
+        silent: true
+
+  new:
+    desc: 'Scaffold a new subproject from _template: task new -- <name>'
+    cmds:
+      - cmd: |
+          name='{{.CLI_ARGS}}'
+          if [ -z "$name" ]; then echo "usage: task new -- <name>"; exit 1; fi
+          if [ -e "$name" ]; then echo "'$name' already exists"; exit 1; fi
+      - cmd: xcopy /E /I /Q _template "{{.CLI_ARGS}}"
+        platforms: [windows]
+      - cmd: cp -r _template "{{.CLI_ARGS}}"
+        platforms: [linux, darwin]
+      - cmd: |
+          echo ">> created '{{.CLI_ARGS}}' -- next: task test -- {{.CLI_ARGS}}"
+
+  test:
+    desc: 'Build & run unit tests for one subproject: task test -- <name>'
+    cmds:
+      - cmd: |
+          dir='{{.CLI_ARGS}}'
+          if [ -z "$dir" ]; then echo "usage: task test -- <name>"; exit 1; fi
+          if [ ! -d "$dir" ]; then echo "no such subproject: $dir"; exit 1; fi
+          set -- "$dir"/*_test.cpp
+          if [ ! -e "$1" ]; then echo "no *_test.cpp files found in $dir"; exit 1; fi
+          echo ">> building tests for $dir"
+          {{.CXX}} {{.CXXFLAGS}} "$dir"/*_test.cpp common/doctest_main.cpp -o "$dir/.test_runner{{.EXE}}"
+          echo ">> running $dir tests"
+          "$dir/.test_runner{{.EXE}}"
+
+  test-all:
+    desc: Build & run unit tests for every subproject
+    cmds:
+      - cmd: |
+          rc=0
+          for d in */ ; do
+            d="${d%/}"; d="${d%\\}"
+            case "$d" in _*|.*|common) continue;; esac
+            set -- "$d"/*_test.cpp
+            [ -e "$1" ] || continue
+            echo "==================== $d ===================="
+            if {{.CXX}} {{.CXXFLAGS}} "$d"/*_test.cpp common/doctest_main.cpp -o "$d/.test_runner{{.EXE}}"; then
+              "$d/.test_runner{{.EXE}}" || rc=1
+            else
+              rc=1
+            fi
+          done
+          exit $rc
+
+  run:
+    desc: 'Build & run the demo (main.cpp) of a subproject: task run -- <name>'
+    cmds:
+      - cmd: |
+          dir='{{.CLI_ARGS}}'
+          if [ -z "$dir" ]; then echo "usage: task run -- <name>"; exit 1; fi
+          if [ ! -f "$dir/main.cpp" ]; then echo "no main.cpp in $dir"; exit 1; fi
+          {{.CXX}} {{.CXXFLAGS}} "$dir/main.cpp" -o "$dir/.demo{{.EXE}}"
+          "$dir/.demo{{.EXE}}"
+
+  clean:
+    desc: Remove built binaries (.test_runner / .demo) from all subprojects
+    cmds:
+      - cmd: cmd /C del /S /Q /F .test_runner.exe .demo.exe
+        platforms: [windows]
+        ignore_error: true
+      - cmd: find . \( -name '.test_runner' -o -name '.demo' \) -delete
+        platforms: [linux, darwin]
+        ignore_error: true

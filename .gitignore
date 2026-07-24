@@ -1,0 +1,22 @@
+# Built test/demo binaries produced by task/make
+*/.test_runner
+*/.test_runner.exe
+*/.demo
+*/.demo.exe
+
+# Other compiler output
+*.o
+*.obj
+*.exe
+*.out
+
+# Task runner cache
+.task/
+
+# OS / editor cruft
+Thumbs.db
+.DS_Store
+*.swp
+*~
+
+# Keep .vscode/ (IntelliSense config is committed on purpose and documented in README)
