@@ -1,9 +1,11 @@
 #pragma once
-#include <string>
 #include <algorithm>
+#include <cctype>
+#include <cstddef>
+#include <string>
 
-// Implementation of your algorithm / mechanism goes here.
-// Keep it header-only so the tests can include it directly.
+// validate_token: убираем разделители ('-' и пробел), проверяем, что остались
+// только цифры, и подтверждаем контрольную сумму по алгоритму Луна (Luhn).
 namespace algo {
 
 inline std::string remove_special_characters(std::string str) {

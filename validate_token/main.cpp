@@ -1,8 +1,8 @@
+#include <cstddef>
+#include <exception>
 #include <iostream>
-#include <vector>
 #include <string>
-#include <cctype>
-#include <algorithm>
+#include <vector>
 
 #include "validate_token.hpp"
 

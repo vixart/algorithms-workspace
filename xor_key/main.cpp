@@ -1,8 +1,8 @@
+#include <ios>       // std::streamsize
 #include <iostream>
-#include <vector>
+#include <limits>    // std::numeric_limits
 #include <string>
-#include <ios>
-#include <limits>
+#include <vector>
 
 #include "xor_key.hpp"
 

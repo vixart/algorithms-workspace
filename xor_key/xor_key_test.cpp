@@ -1,5 +1,7 @@
 #include "doctest.h"
 
+#include <string>
+
 #include "xor_key.hpp"
 
 TEST_CASE("test #1") {
